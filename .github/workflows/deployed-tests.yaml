@@ -180,6 +180,27 @@ jobs:
           role-to-assume: ${{ secrets.DEMO_TESTING_ROLE_ARN }}
           aws-region: eu-west-2
 
+      - name: Diagnose Notify test config presence
+        # Reports only whether each variable is set and its length, never the
+        # value itself: GitHub masks registered secrets in logs, and the ARN is
+        # sensitive. This tells us why the Notify suite skips (the gate requires
+        # both PUBLIC_API_BASE_URL and NOTIFY_DELIVERY_RECEIPTS_SECRET_ARN to be
+        # non-empty) without leaking anything.
+        env:
+          PUBLIC_API_BASE_URL: ${{ secrets.TEST_PUBLIC_API_BASE_URL }}
+          NOTIFY_DELIVERY_RECEIPTS_SECRET_ARN: ${{ secrets.TEST_NOTIFY_DELIVERY_RECEIPTS_SECRET_ARN }}
+        run: |
+          report() {
+            local name="$1" value="$2"
+            if [ -z "$value" ]; then
+              echo "${name}: NOT SET (empty) -> Notify tests will SKIP"
+            else
+              echo "${name}: set (length ${#value})"
+            fi
+          }
+          report "PUBLIC_API_BASE_URL" "$PUBLIC_API_BASE_URL"
+          report "NOTIFY_DELIVERY_RECEIPTS_SECRET_ARN" "$NOTIFY_DELIVERY_RECEIPTS_SECRET_ARN"
+
       - name: Run integration tests
         working-directory: ${{ github.workspace }}
         env:
